@@ -42,7 +42,6 @@ public class CastManager {
     private void setupSessionListener() {
         try {
             SessionManager sm = castContext.getSessionManager();
-            // Recuperar sesión activa si existe
             CastSession existing = sm.getCurrentCastSession();
             if (existing != null && existing.isConnected()) {
                 currentSession = existing;
@@ -111,10 +110,6 @@ public class CastManager {
         }
     }
 
-    /**
-     * Envía un video al dispositivo Cast conectado.
-     * Soporta: mp4, m3u8 (HLS), mpd (DASH), webm, ogv
-     */
     public void castVideo(String videoUrl, String title, String mimeType) {
         if (castContext == null) {
             if (statusListener != null)
@@ -135,10 +130,10 @@ public class CastManager {
             return;
         }
 
-        // Detectar MIME si no se especificó
-        if (mimeType == null || mimeType.isEmpty()) {
-            mimeType = detectMimeType(videoUrl);
-        }
+        // Guardar como final para usar dentro del lambda
+        final String finalMimeType = (mimeType == null || mimeType.isEmpty())
+            ? detectMimeType(videoUrl)
+            : mimeType;
 
         MediaMetadata metadata = new MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE);
         metadata.putString(MediaMetadata.KEY_TITLE,
@@ -147,7 +142,7 @@ public class CastManager {
 
         MediaInfo mediaInfo = new MediaInfo.Builder(videoUrl)
             .setStreamType(MediaInfo.STREAM_TYPE_BUFFERED)
-            .setContentType(mimeType)
+            .setContentType(finalMimeType)
             .setMetadata(metadata)
             .build();
 
@@ -157,7 +152,7 @@ public class CastManager {
             .setCurrentTime(0)
             .build();
 
-        Log.d(TAG, "Casting: " + videoUrl + " [" + mimeType + "]");
+        Log.d(TAG, "Casting: " + videoUrl + " [" + finalMimeType + "]");
 
         client.load(loadRequest).addStatusListener(result -> {
             if (result.isSuccess()) {
@@ -167,48 +162,34 @@ public class CastManager {
                 if (statusListener != null)
                     statusListener.onError(
                         "No se pudo cargar el video. " +
-                        "El formato " + mimeType + " puede no ser compatible.");
+                        "El formato " + finalMimeType + " puede no ser compatible.");
             }
         });
     }
 
-    /**
-     * Detecta el MIME type según la URL.
-     * Soporta 10+ formatos.
-     */
     public static String detectMimeType(String url) {
         if (url == null) return "video/mp4";
         String lower = url.toLowerCase();
 
-        // HLS
         if (lower.contains(".m3u8") || lower.contains("m3u8"))
             return "application/x-mpegURL";
-        // MPEG-DASH
         if (lower.contains(".mpd") || lower.contains("/dash/"))
             return "application/dash+xml";
-        // WebM
         if (lower.contains(".webm"))
             return "video/webm";
-        // OGG
         if (lower.contains(".ogv") || lower.contains(".ogg"))
             return "video/ogg";
-        // MKV
         if (lower.contains(".mkv"))
             return "video/x-matroska";
-        // AVI
         if (lower.contains(".avi"))
             return "video/x-msvideo";
-        // MOV
         if (lower.contains(".mov"))
             return "video/quicktime";
-        // TS (MPEG Transport Stream)
         if (lower.contains(".ts") || lower.contains("segment") || lower.contains(".seg"))
             return "video/mp2t";
-        // FLV
         if (lower.contains(".flv"))
             return "video/x-flv";
 
-        // Default
         return "video/mp4";
     }
 
