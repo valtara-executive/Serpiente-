@@ -234,9 +234,13 @@ public class MainActivity extends AppCompatActivity {
         s.setSavePassword(false);
         s.setGeolocationEnabled(false);
 
-        // === MODO OSCURO FORZADO ===
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            webView.setForceDark(WebView.FORCE_DARK_ON);
+        // === MODO OSCURO — compatible con todas las versiones ===
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            // API 33+ : usar CSS vía JS (setForceDark eliminado)
+            // El modo oscuro se aplica por injectDarkModeJS() en onPageFinished
+        } else if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            // API 29-32
+            webView.getSettings().setForceDark(WebSettings.FORCE_DARK_ON);
         }
 
         // User Agent moderno
@@ -246,7 +250,6 @@ public class MainActivity extends AppCompatActivity {
 
         // === BLOQUEO DE DESCARGAS (TOTAL) ===
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) -> {
-            // Bloqueamos TODA descarga automática
             new AlertDialog.Builder(this)
                 .setTitle("🛡️ Descarga bloqueada")
                 .setMessage("StreamBrowser bloqueó una descarga automática por seguridad.\n\n" +
@@ -263,19 +266,16 @@ public class MainActivity extends AppCompatActivity {
                     WebView view, WebResourceRequest request) {
                 String url = request.getUrl().toString();
 
-                // Bloquear HTTP (solo HTTPS permitido en sitios externos)
                 if (url.startsWith("http://") && !url.startsWith("http://localhost")) {
                     Log.d(TAG, "HTTP blocked: " + url);
                     return emptyResponse();
                 }
 
-                // AdBlock
                 if (AdBlocker.getInstance().shouldBlock(url)) {
                     blockedAdsCount++;
                     return emptyResponse();
                 }
 
-                // Detectar video
                 detectVideoUrl(url);
 
                 return super.shouldInterceptRequest(view, request);
@@ -288,7 +288,6 @@ public class MainActivity extends AppCompatActivity {
                 if (!url.startsWith("data:")) urlBar.setText(url);
                 lastDetectedVideoUrl = null;
                 detectedVideos.clear();
-                // Resetear botón cast
                 if (btnCast != null) btnCast.setAlpha(0.5f);
             }
 
@@ -305,12 +304,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
                 String url = req.getUrl().toString();
-                // Bloquear esquemas peligrosos
                 if (url.startsWith("javascript:") || url.startsWith("vbscript:") ||
                     url.startsWith("file:") || url.startsWith("intent:") ||
                     url.startsWith("android-app:")) {
                     Log.w(TAG, "DANGEROUS URL blocked: " + url);
-                    return true; // Bloquear
+                    return true;
                 }
                 return false;
             }
@@ -330,12 +328,10 @@ public class MainActivity extends AppCompatActivity {
                 lastDetectedVideoTitle = title;
             }
 
-            // === BLOQUEO TOTAL DE PERMISOS ===
             @Override
             public void onPermissionRequest(PermissionRequest request) {
-                // Denegar TODOS los permisos que pidan las webs
                 request.deny();
-                Log.w(TAG, "Permission DENIED: " + 
+                Log.w(TAG, "Permission DENIED: " +
                     java.util.Arrays.toString(request.getResources()));
             }
 
@@ -345,7 +341,6 @@ public class MainActivity extends AppCompatActivity {
                 callback.invoke(origin, false, false);
             }
 
-            // Bloquear alertas JS molestas
             @Override
             public boolean onJsAlert(WebView view, String url,
                     String message, JsResult result) {
@@ -360,7 +355,6 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
 
-            // Capturar console.log para detectar videos via JS
             @Override
             public boolean onConsoleMessage(ConsoleMessage msg) {
                 String m = msg.message();
@@ -382,22 +376,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // === INYECCIONES JS DE SEGURIDAD ===
-
     private void injectSecurityJS() {
         webView.evaluateJavascript(
             "(function(){" +
-            // Bloquear notificaciones
             "if(window.Notification)window.Notification=function(){return{}};" +
             "if(navigator.serviceWorker)navigator.serviceWorker.register=function(){" +
             "  return Promise.reject('blocked');};" +
-            // Bloquear WebRTC (anti IP leak)
             "if(window.RTCPeerConnection)window.RTCPeerConnection=function(){return null;};" +
             "if(window.webkitRTCPeerConnection)window.webkitRTCPeerConnection=function(){return null;};" +
-            // Anti fingerprinting básico
             "Object.defineProperty(navigator,'plugins',{get:function(){return[];}});" +
             "Object.defineProperty(navigator,'languages',{get:function(){return['es-MX','es'];}});" +
-            // Bloquear popups
             "window.open=function(){return null;};" +
             "window.alert=function(){};" +
             "window.confirm=function(){return false;};" +
@@ -421,7 +409,7 @@ public class MainActivity extends AppCompatActivity {
             "(function(){" +
             "var s=document.createElement('style');" +
             "s.innerHTML='html{filter:invert(0.9) hue-rotate(180deg)!important;}" +
-            "img,video,canvas,iframe{filter:invert(1) hue-rotate(180deg)!important;}';" +
+            "img,video,canvas,iframe{filter:invert(1) hue-rotate(180deg)!important;}';"+
             "document.head&&document.head.appendChild(s);" +
             "})();", null);
     }
@@ -430,19 +418,15 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript(
             "(function(){" +
             "function report(u){if(u&&u.length>5)console.log('STREAMBROWSER_VIDEO:'+u);}" +
-            // Videos directos
             "document.querySelectorAll('video').forEach(function(v){" +
             "  report(v.src||v.currentSrc);" +
             "  v.addEventListener('loadeddata',function(){report(v.currentSrc);});" +
             "});" +
-            // Sources dentro de video
             "document.querySelectorAll('video source').forEach(function(s){report(s.src);});" +
-            // Iframes
             "document.querySelectorAll('iframe').forEach(function(f){" +
             "  try{var v=f.contentDocument.querySelector('video');" +
             "  if(v)report(v.src||v.currentSrc);}catch(e){}" +
             "});" +
-            // Interceptar fetch y XHR para detectar m3u8
             "var origFetch=window.fetch;" +
             "window.fetch=function(u,o){" +
             "  if(typeof u==='string'&&(u.includes('.m3u8')||u.includes('.mpd')||u.includes('.mp4')))" +
@@ -498,7 +482,6 @@ public class MainActivity extends AppCompatActivity {
         if (detectedVideos.size() == 1) {
             confirmCast(detectedVideos.get(0));
         } else {
-            // Múltiples videos detectados — mostrar lista
             String[] items = detectedVideos.toArray(new String[0]);
             new AlertDialog.Builder(this)
                 .setTitle("🎬 Selecciona el video")
@@ -552,7 +535,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        // Limpiar al salir
         webView.clearCache(true);
         webView.clearHistory();
         webView.clearFormData();
