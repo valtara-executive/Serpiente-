@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.streambrowser'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.streambrowser"
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    // AndroidX core
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+
+    // Google Cast SDK
+    implementation 'com.google.android.gms:play-services-cast-framework:21.4.0'
+
+    // MediaRouter for Cast button
+    implementation 'androidx.mediarouter:mediarouter:1.7.0'
+
+    // OkHttp for fetching EasyList filter rules
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}
