@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0A0A0F</color>
     <color name="colorPrimary">#7B68EE</color>
-    <color name="colorPrimaryDark">#12121A</color>
-    <color name="colorAccent">#7B68EE</color>
+    <color name="colorPrimaryDark">#5A4FCF</color>
+    <color name="colorAccent">#9B8FFF</color>
     <color name="background_dark">#0A0A0F</color>
-    <color name="toolbar_bg">#12121A</color>
+    <color name="toolbar_bg">#0D0D1A</color>
+    <color name="url_bar_bg">#1A1A2E</color>
     <color name="text_primary">#E0E0FF</color>
-    <color name="text_secondary">#8888AA</color>
+    <color name="text_hint">#44445A</color>
+    <color name="icon_tint">#7B68EE</color>
+    <color name="progress_tint">#7B68EE</color>
+    <color name="cast_active">#9B8FFF</color>
+    <color name="cast_inactive">#3D3D7A</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
 </resources>
