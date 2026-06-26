@@ -19,10 +19,8 @@ jobs:
       - name: Fix gradle-wrapper.jar
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.2-bin.zip -O /tmp/gradle.zip
-          unzip -l /tmp/gradle.zip | grep "wrapper"
-          JAR_PATH=$(unzip -l /tmp/gradle.zip | grep "gradle-wrapper.jar" | awk '{print $4}')
-          unzip -p /tmp/gradle.zip "$JAR_PATH" > gradle/wrapper/gradle-wrapper.jar
-          echo "JAR size: $(wc -c < gradle/wrapper/gradle-wrapper.jar)"
+          unzip -p /tmp/gradle.zip gradle-8.2/lib/plugins/gradle-wrapper-8.2.jar > gradle/wrapper/gradle-wrapper.jar
+          echo "JAR size: $(wc -c < gradle/wrapper/gradle-wrapper.jar) bytes"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
